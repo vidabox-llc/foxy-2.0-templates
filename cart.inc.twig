@@ -28,6 +28,8 @@
 
 <div id="fc-cart" {% if context == 'cart' %}class="fc-container"{% endif %}>
 {% import "utils.inc.twig" as utils %}
+{% import _self as self %}
+
 {#
     Blocks within "cart" block:
     noscript_warning
@@ -416,7 +418,7 @@
                               <div class="bounce3"></div>
                             </div>
                         {% endif %}
-                        {{ utils.shipping_results(shipping_address, "fc-input-group--sidebar", messages.errors, config.lang) }}
+                        {{ self.shipping_results_grouped(shipping_address, "fc-input-group--sidebar", messages.errors, config.lang) }}
                         {% set error_string = utils.get_error_string('shipping-results',messages.errors) %}
                         {% if error_string %}
                         <div class="fc-alert fc-alert--danger">
@@ -906,3 +908,42 @@
 </div><!-- data-fc-container="cart" -->
 {% endblock %}{# cart #}
 {# ===================================================== #}
+
+{% macro shipping_results_grouped(address, context_class, errors, lang) %}
+    {% set field_name = 'shipping_service_id' %}
+    {% if address.prefix != 'shipping' %}
+        {% set field_name = address.prefix~'_'~field_name %}
+    {% endif %}
+    {% set error_string = utils.get_error_string(field_name, errors) %}
+    {% if address.shipping_results|length > 0 %}
+
+        {% set grouped_rates = [] %}
+        {% set carriers = [] %}
+        {% for rate in address.shipping_results %}
+            {% set carrier = rate.method %}
+            <div>{{ carrier }} {{ attribute(grouped_rates, carrier) is not defined ? 'not defined' : 'defined' }}</div>
+            {% if attribute(grouped_rates, carrier) is not defined %}
+                {% set grouped_rates = grouped_rates|merge({ (carrier): [] }) %}
+            {% endif %}
+            {# set grouped_rates = grouped_rates|merge({(carrier): grouped_rates[carrier]|merge([rate]) })  #}
+        {% endfor %}
+        <br><br>
+        {% for carrier,rates in grouped_rates %}
+            <i>{{ carrier }}</i>
+            <ul>
+                {% for rate in rates %}
+                    <li>{{ rate.service_name }} - {{ rate.price}}</li>
+                {% endfor %}
+            </ul>
+        {% endfor %}
+
+        {% if error_string %}
+            <div class="fc-alert fc-alert--danger">
+                {{ lang.checkout_select_shipping_option|raw }}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endmacro %}
+
